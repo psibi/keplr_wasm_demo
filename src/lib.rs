@@ -1,7 +1,7 @@
 use std::fmt::format;
 
 use anyhow::{anyhow, Context};
-use js_sys::Object;
+use js_sys::{Array, Object};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{console, Request, Response};
@@ -15,7 +15,7 @@ async fn run() {
     } else {
         console::log_1(&"keplr installed".into());
         let keplr = keplr.unwrap();
-        keplr.enable_keplr("osmo-test-5").await;
+        keplr.enable_keplr(vec!["osmo-test-5"]).await;
         let accounts = keplr.get_accounts("osmo-test-5").await.unwrap();
         let network = Network::OsmosisTestnet;
         let balance = network.get_balance(accounts[0].clone()).await.unwrap();
@@ -79,8 +79,12 @@ impl Keplr {
         Ok(keplr)
     }
 
-    pub async fn enable_keplr(&self, chain_id: &str) {
-        enable_keplr(chain_id).await;
+    pub async fn enable_keplr(&self, chain_ids: Vec<&str>) {
+        let array = Array::new();
+        for chain_id in chain_ids {
+            array.push(&chain_id.into());
+        }
+        enable_keplr(array).await;
     }
 
     pub async fn get_accounts(&self, chain_id: &str) -> anyhow::Result<Vec<WalletAddress>> {
@@ -93,7 +97,7 @@ impl Keplr {
 #[wasm_bindgen(module = "/keplr.js")]
 extern "C" {
     // https://github.com/chainapsis/keplr-wallet/blob/3823e983845b318cebddc148675418047e7bd2d3/packages/types/src/wallet/keplr.ts#L75
-    async fn enable_keplr(chain_id: &str);
+    async fn enable_keplr(chain_ids: Array);
 
     async fn get_accounts(chain_id: &str) -> JsValue;
 }
